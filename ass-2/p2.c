@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -21,61 +22,46 @@ char **parseToken(char *line)
     return tokens;
 }
 
-void doCount(char cmd, const char *filename)
-{
+int doList(char arg, const char *dirname) {
+    DIR *dir;
+    struct dirent *dp;
+    long entry_count = 0;
 
-    FILE *fp = fopen(filename, "r");
-
-    if (fp == NULL)
-    {
-        printf("Error in opening file\n");
-        return;
+    // 1. Open the directory
+    if ((dir = opendir(dirname)) == NULL) {
+        perror("opendir");
+        return 1;
     }
 
-    int c;
-    long charsCount = 0;
-    int wordsCount = 0, linesCount = 0, inWord = 0, last = -1;
-    while ((c = fgetc(fp)) != EOF)
-    {
-        char ch = (char)c;
-        charsCount++;
+    printf("--- Directory: %s ---\n", dirname);
 
-        if (ch == '\n')
-            linesCount++;
+    // 2. Read entries and process based on argument
+    while ((dp = readdir(dir)) != NULL) {
+        entry_count++;
 
-        if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
-        {
-            inWord = 0;
+        if (arg == 'f') {
+            // list f: Display filenames
+            printf("  %s\n", dp->d_name);
+        } else if (arg == 'i') {
+            // list i: Display inode number and filenames
+            // (Note: d_ino is typically an ino_t, printed as unsigned long or similar)
+            printf("  Inode: %lu, Name: %s\n", (unsigned long)dp->d_ino, dp->d_name);
         }
-        else
-        {
-            if (!inWord)
-            {
-                inWord = 1;
-                wordsCount++;
-            }
-        }
-
-        last = ch;
+        // 'n' option just counts, so no output here
     }
 
-    linesCount++;
-
-    switch (cmd)
-    {
-    case 'c':
-        printf("Character Count: %ld\n", charsCount);
-        break;
-
-    case 'w':
-        printf("Words Count: %d\n", wordsCount);
-        break;
-
-    case 'l':
-        printf("Lines Count: %d\n", linesCount);
-        break;
+    // 3. Print count for 'n' option
+    if (arg == 'n') {
+        printf("Total entries counted: %ld\n", entry_count);
+    } else if (arg != 'f' && arg != 'i') {
+        fprintf(stderr, "Usage: list <f|n|i> <dirname>\n");
+        closedir(dir);
+        return 1;
     }
-    fclose(fp);
+
+    // 4. Cleanup
+    closedir(dir);
+    return 0;
 }
 
 int main()
@@ -106,16 +92,16 @@ int main()
             printf("Exiting...\n");
             break;
         }
-        else if (strcmp(tokens[0], "count") == 0)
+        else if (strcmp(tokens[0], "list") == 0)
         {
             if (!tokens[1] || !tokens[2])
             {
-                printf("Usage: count <c|w|l> <filenam>");
+                printf("Usage: list <f|n|i> <filename>");
                 break;
             }
             else
             {
-                doCount(tokens[1][0], tokens[2]);
+                doList(tokens[1][0], tokens[2]);
             }
         }
         else
