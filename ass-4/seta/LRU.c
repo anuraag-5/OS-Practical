@@ -1,8 +1,8 @@
 #include <stdio.h>
 
-#define REF_LEN 17
+#define REF_LEN 16
 
-int ref_string[REF_LEN] = { 12 ,5 ,12 ,18 ,6 ,8 ,3 ,11 ,2 ,19 ,12 ,6 ,8 ,12 ,15 ,19 ,8 };
+int ref_string[REF_LEN] = { 12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8 };
 
 void print_frames(int frames[], int n) {
     int i;
